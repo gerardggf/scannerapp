@@ -1,4 +1,6 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:scannerapp/screens/scanner.dart';
 
@@ -66,37 +68,132 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   //se construye el widget iterativo
-  Widget buildDocsEsc(Escaneado escaneado) => GridTile(
-        header: GridTileBar(
-            backgroundColor: Colors.white60,
-            title: RichText(
-              text: TextSpan(
-                text: escaneado.nombre,
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: kFontSize),
-                children: <TextSpan>[
-                  TextSpan(
-                      text: "\t\t\t${escaneado.fechaPubl}",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: kFontSize / 1.7)),
-                ],
-              ),
-            )),
-        child: Image.network(
-          escaneado.urlFotos[0] ?? "https://picsum.photos/250?image=9",
-          width: 55,
-          height: 100,
-          fit: BoxFit.cover,
+  Widget buildDocsEsc(Escaneado escaneado) => GestureDetector(
+        //para poder abrir un carrusel y ver todas las imágenes deslizando.
+        onTap: () {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (BuildContext context) {
+                    return Scaffold(
+                      appBar: AppBar(
+                        title: Text(
+                          escaneado.nombre,
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                        actions: [
+                          //eliminar documento y diálogo de confirmación
+                          IconButton(
+                              onPressed: () => showDialog<String>(
+                                    context: context,
+                                    builder: (BuildContext context) =>
+                                        AlertDialog(
+                                      title: const Text('Eliminar documento'),
+                                      content: const Text(
+                                          '¿Estás seguro que deseas eliminar este documento?'),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, 'Cancel'),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, 'OK');
+                                            deleteEscaneado(escaneado.urlFotos,
+                                                    escaneado.id)
+                                                .then((value) =>
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                      const SnackBar(
+                                                          content: Text(
+                                                              "Documento eliminado correctamente")),
+                                                    ));
+
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text('Sí'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              icon: const Icon(Icons.delete))
+                        ],
+                      ),
+                      body: GestureDetector(
+                        child: CarouselSlider.builder(
+                          options: CarouselOptions(
+                            height: 800,
+                            viewportFraction: 1,
+                            initialPage: 0,
+                            enableInfiniteScroll: true,
+                            reverse: false,
+                            autoPlayCurve: Curves.fastOutSlowIn,
+                            enlargeCenterPage: true,
+                            scrollDirection: Axis.horizontal,
+                          ),
+                          itemCount: escaneado.urlFotos.length,
+                          itemBuilder: (BuildContext context, int itemIndex,
+                                  int pageViewIndex) =>
+                              Center(
+                            child: Image.network(
+                              escaneado.urlFotos[itemIndex],
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                    );
+                  }));
+        },
+        //texto de cada item en la lista de documentos
+        child: GridTile(
+          header: GridTileBar(
+              backgroundColor: Colors.white60,
+              title: RichText(
+                text: TextSpan(
+                  text: escaneado.nombre,
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: kFontSize),
+                  children: <TextSpan>[
+                    TextSpan(
+                        text: "\t\t\t${escaneado.fechaPubl}",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.normal,
+                            fontSize: kFontSize / 1.7)),
+                  ],
+                ),
+              )),
+          //miniatura de cada item en la lista de documentos
+          child: Image.network(
+            escaneado.urlFotos[0] ?? "https://picsum.photos/250?image=9",
+            width: 55,
+            height: 100,
+            fit: BoxFit.cover,
+          ),
         ),
       );
 
   //se obtiene la información de Firebase Firestore
   Stream<List<Escaneado>> getEscaneados() => FirebaseFirestore.instance
       .collection('escaneados')
+      .orderBy("fechaPubl", descending: true)
       .snapshots()
       .map((snapshot) =>
           snapshot.docs.map((doc) => Escaneado.fromJson(doc.data())).toList());
+
+  //se eliminan los datos de la base de datos y las imagenes a partir de su enlace de descarga
+  Future deleteEscaneado(List urlFotos, String id) async {
+    for (var urlFoto in urlFotos) {
+      await FirebaseStorage.instance.refFromURL(urlFoto).delete();
+    }
+    await FirebaseFirestore.instance.collection('escaneados').doc(id).delete();
+  }
 }

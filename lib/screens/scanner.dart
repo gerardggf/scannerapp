@@ -40,31 +40,41 @@ class _ScannerScreenState extends State<ScannerScreen> {
   var cNombre = TextEditingController();
   List<String> urlDownloadFoto = [];
   UploadTask? uploadtask;
+  bool publicando = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(title: const Text("Escanear documento"), actions: [
-          IconButton(
-              onPressed: () {
-                //se aplican los requisitos para la valdiación (definidos más abajo)
-                //de la misma forma, se comprueba que el array que contiene los links de las imágenes en el Firebase Storage, no sea nulo
-                //...para que siempre haya mínimo una imagen que mostrar en la pantalla "home"
-                var isValid = _formKey.currentState!.validate();
-                if (fotosDoc.isEmpty) {
-                  isValid = false;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("No has seleccionado ninguna imagen")));
-                }
-                if (!isValid) return;
-                setEscaneo();
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text("Documento correctamente publicado")),
-                );
-              },
-              icon: const Icon(Icons.save))
+          if (publicando == false)
+            IconButton(
+                onPressed: () {
+                  //se aplican los requisitos para la valdiación (definidos más abajo)
+                  //de la misma forma, se comprueba que el array que contiene los links de las imágenes en el Firebase Storage, no sea nulo
+                  //...para que siempre haya mínimo una imagen que mostrar en la pantalla "home"
+                  var isValid = _formKey.currentState!.validate();
+                  if (fotosDoc.isEmpty) {
+                    isValid = false;
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text("No has seleccionado ninguna imagen")));
+                  }
+                  if (!isValid) return;
+                  setEscaneo().then(
+                    (value) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Documento publicado correctamente")),
+                      );
+                      Navigator.of(context).pop();
+                    },
+                  );
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Se está publicando el documento...")),
+                  );
+                },
+                icon: const Icon(Icons.save)),
         ]),
         body: SingleChildScrollView(
           child: Container(
@@ -74,7 +84,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      const Text("Nombre del documento:"),
+                      const SizedBox(
+                        height: kPadding,
+                      ),
                       TextFormField(
                         decoration: const InputDecoration(
                           icon: Icon(Icons.description),
@@ -93,24 +105,33 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         },
                       ),
                       const SizedBox(
-                        height: 50,
+                        height: 20,
                       ),
-                      TextButton.icon(
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size.fromHeight(45),
-                          ),
-                          onPressed: () {
-                            onPressed();
-                          },
-                          icon: const Icon(
-                            Icons.document_scanner,
-                            size: 35,
-                          ),
-                          label: const Text(
-                            "Añadir imágenes del documento",
-                            style: TextStyle(fontSize: kFontSize),
-                          )),
-                      for (var foto in fotosDoc) Image.file(File(foto))
+                      //se muestra un círculo indicador de progreso en vez del botón de añadir imágenes si se está publicando un documento
+                      if (publicando == true) const CircularProgressIndicator(),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      if (publicando == false)
+                        TextButton.icon(
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size.fromHeight(45),
+                            ),
+                            onPressed: () {
+                              onPressed();
+                            },
+                            icon: const Icon(
+                              Icons.document_scanner,
+                              size: 35,
+                            ),
+                            label: const Text(
+                              "Añadir imágenes al documento",
+                              style: TextStyle(fontSize: kFontSize),
+                            )),
+                      const SizedBox(
+                        height: kPadding,
+                      ),
+                      for (var foto in fotosDoc) Image.file(File(foto)),
                     ],
                   ),
                 ),
@@ -161,9 +182,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   //cada una de las imágenes es subida al Firebase Storage
   Future subirFoto() async {
+    setState(() {
+      publicando = true;
+    });
     for (var fotoDoc in fotosDoc) {
       final path = 'escaneados/${fotoDoc.split('/').last}';
-      var file2 = await comprimirFoto(fotoDoc, 30);
+      var file2 = await comprimirFoto(fotoDoc, 70);
 
       final ref = FirebaseStorage.instance.ref().child(path);
 
@@ -173,5 +197,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       //se almacenan los links de cad aimagen en un array para ser subidos a la Firestore
       urlDownloadFoto.add(await snapshotF.ref.getDownloadURL());
     }
+    setState(() {
+      publicando = false;
+    });
   }
 }
