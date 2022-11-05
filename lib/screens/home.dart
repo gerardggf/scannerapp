@@ -102,15 +102,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                           onPressed: () {
                                             Navigator.pop(context, 'OK');
                                             deleteEscaneado(escaneado.urlFotos,
-                                                    escaneado.id)
-                                                .then((value) =>
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      const SnackBar(
-                                                          content: Text(
-                                                              "Documento eliminado correctamente")),
-                                                    ));
+                                                escaneado.id);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      "Documento eliminado correctamente")),
+                                            );
 
                                             Navigator.of(context).pop();
                                           },
@@ -190,10 +188,10 @@ class _HomeScreenState extends State<HomeScreen> {
           snapshot.docs.map((doc) => Escaneado.fromJson(doc.data())).toList());
 
   //se eliminan los datos de la base de datos y las imagenes a partir de su enlace de descarga
-  Future deleteEscaneado(List urlFotos, String id) async {
+  deleteEscaneado(List urlFotos, String id) {
     for (var urlFoto in urlFotos) {
-      await FirebaseStorage.instance.refFromURL(urlFoto).delete();
+      FirebaseStorage.instance.refFromURL(urlFoto).delete();
     }
-    await FirebaseFirestore.instance.collection('escaneados').doc(id).delete();
+    FirebaseFirestore.instance.collection('escaneados').doc(id).delete();
   }
 }
