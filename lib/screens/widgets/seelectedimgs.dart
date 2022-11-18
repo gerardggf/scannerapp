@@ -21,16 +21,13 @@ class _SelectedImgsState extends State<SelectedImgs> {
               style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
             ),
           )
-        : SizedBox(
-            height: 1000,
-            child: GridView(
-                scrollDirection: Axis.vertical,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, crossAxisSpacing: 3, mainAxisSpacing: 3),
-                children: [
-                  for (var foto in widget.fotosDoc)
-                    GridTile(child: Image.file(File(foto), fit: BoxFit.cover)),
-                ]),
-          );
+        : GridView(
+            scrollDirection: Axis.vertical,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3, crossAxisSpacing: 3, mainAxisSpacing: 3),
+            children: [
+                for (var foto in widget.fotosDoc)
+                  GridTile(child: Image.file(File(foto), fit: BoxFit.cover)),
+              ]);
   }
 }
