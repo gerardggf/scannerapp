@@ -1,6 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:scannerapp/global/const.dart';
 
+import 'blocs/tabinfo_bloc.dart';
 import 'screens/home.dart';
 
 Future main() async {
@@ -14,13 +17,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'ScannerApp',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const HomeScreen(),
-    );
+    return BlocProvider(
+        //aquí se define el provider
+        create: (_) => TabInfoBloc(),
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'ScannerApp',
+          theme: ThemeData(
+            primarySwatch: kPColor,
+          ),
+          home: const HomeScreen(),
+        ));
   }
 }
